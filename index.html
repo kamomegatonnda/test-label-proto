@@ -81,7 +81,7 @@
 
   /* ---------- カタログ(曲一覧) ---------- */
   .catalog-header{ display:flex; flex-direction:column; align-items:center; margin-bottom:20px; text-align:center; }
-  .catalog-logo{ width:180px; height:180px; border-radius:36px; margin-bottom:18px; }
+  .catalog-logo{ width:180px; height:180px; border-radius:36px; margin-bottom:4px; }
   .catalog-brand{ font-size:22px; font-weight:600; letter-spacing:.04em; color:var(--gold-soft); margin-bottom:6px; }
   .catalog-count{ font-size:11px; color:var(--text-dim); letter-spacing:.05em; }
   .copyright{ text-align:center; font-size:10px; color:var(--text-dim); letter-spacing:.02em; padding-top:18px; opacity:.7; }
@@ -97,7 +97,13 @@
     color: var(--gold); font-size:20px; width:36px; flex-shrink:0; letter-spacing:.02em;
   }
   .catalog-info{ flex:1; min-width:0; }
-  .catalog-title{ font-family:"Cormorant Garamond","Shippori Mincho",serif; font-size:15.5px; font-weight:500; margin:0 0 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .catalog-title{ font-family:"Cormorant Garamond","Shippori Mincho",serif; font-size:15.5px; font-weight:500; margin:0 0 4px; overflow:hidden; white-space:nowrap; position:relative; }
+  .catalog-title-inner{ display:inline-block; white-space:nowrap; }
+  .catalog-title-inner.marquee{ animation-name: marqueeScroll; animation-timing-function: linear; animation-iteration-count: infinite; animation-direction: alternate; }
+  @keyframes marqueeScroll{
+    0%, 12% { transform: translateX(0); }
+    88%, 100% { transform: translateX(var(--scroll-dist, 0px)); }
+  }
   .catalog-artist{ font-size:11.5px; color:var(--text-dim); margin:0; letter-spacing:.03em; }
   .catalog-play{ font-size:11px; color:var(--text-dim); letter-spacing:.1em; flex-shrink:0; }
   .catalog-row.now-playing{ background: rgba(203,161,53,0.06); }
@@ -265,6 +271,7 @@
         <div class="skip-btn" onclick="skipNext()">▸▸</div>
         <div class="side-btn shuffle-active" id="repeatBtn" onclick="toggleRepeatMode()">⟳ <span class="side-label" id="repeatLabel">LOOP ALL</span></div>
       </div>
+      <p class="copyright">copyright©︎2026 samplelabel All Rights Reserved.</p>
     </div>
 
   </div>
@@ -380,12 +387,28 @@
       el.innerHTML = `
         <div class="catalog-id">${i + 1}</div>
         <div class="catalog-info">
-          <p class="catalog-title">${t.title}</p>
+          <p class="catalog-title"><span class="catalog-title-inner">${t.title}</span></p>
           ${t.artist ? `<p class="catalog-artist">${t.artist}</p>` : ''}
         </div>
         <div class="catalog-play">${i === nowPlayingIndex ? 'NOW PLAYING' : 'PLAY'}</div>
       `;
       list.appendChild(el);
+    });
+    applyTitleMarquee();
+  }
+
+  // タイトルが枠からはみ出す曲だけ、自動で左右にスクロールさせる
+  function applyTitleMarquee(){
+    document.querySelectorAll('.catalog-title').forEach(titleEl => {
+      const inner = titleEl.querySelector('.catalog-title-inner');
+      const overflow = inner.scrollWidth - titleEl.clientWidth;
+      if(overflow > 4){
+        inner.style.setProperty('--scroll-dist', `-${overflow}px`);
+        inner.style.animationDuration = Math.max(3, overflow / 25) + 's';
+        inner.classList.add('marquee');
+      } else {
+        inner.classList.remove('marquee');
+      }
     });
   }
 
