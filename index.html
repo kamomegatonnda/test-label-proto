@@ -94,6 +94,10 @@
   .catalog-title{ font-size:14.5px; font-weight:500; margin:0 0 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .catalog-artist{ font-size:11.5px; color:var(--text-dim); margin:0; letter-spacing:.03em; }
   .catalog-play{ font-size:11px; color:var(--text-dim); letter-spacing:.1em; flex-shrink:0; }
+  .catalog-row.now-playing{ background: rgba(203,161,53,0.06); }
+  .catalog-row.now-playing .catalog-id{ color: var(--gold-soft); }
+  .catalog-row.now-playing .catalog-title{ color: var(--gold-soft); }
+  .catalog-row.now-playing .catalog-play{ color: var(--gold-soft); }
 
   .logout-link{
     margin-top:auto; text-align:center; padding-top:30px;
@@ -117,9 +121,10 @@
   .disc.spinning{ animation-play-state: running; }
   .disc-inner{
     width:100%; height:100%; border-radius:50%; background: var(--black);
-    display:flex; align-items:center; justify-content:center;
+    display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
   }
   .disc-center{ width:16px; height:16px; border-radius:50%; background: var(--gold); }
+  .disc-img{ position:absolute; inset:0; width:100%; height:100%; border-radius:50%; object-fit:cover; }
   @keyframes spin{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
 
   .player-meta{ text-align:center; margin-bottom:26px; }
@@ -151,6 +156,12 @@
   .side-btn.shuffle-active .side-label{ color: var(--gold-soft); }
   .side-btn.active-static{ color: var(--gold-soft); cursor:default; }
   .side-btn.active-static .side-label{ color: var(--gold-soft); }
+  .skip-btn{
+    font-size:20px; color: var(--text); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    width:40px; height:40px;
+  }
+  .skip-btn:active{ color: var(--gold-soft); }
 
   .demo-tag{
     position:fixed; top:10px; left:50%; transform:translateX(-50%);
@@ -215,7 +226,12 @@
         <div class="player-catalog" id="pCatalog">TL—001</div>
       </div>
       <div class="player-art">
-        <div class="disc" id="disc"><div class="disc-inner"><div class="disc-center"></div></div></div>
+        <div class="disc" id="disc">
+          <div class="disc-inner" id="discInner">
+            <img id="discImg" class="disc-img" alt="" style="display:none;">
+            <div class="disc-center" id="discCenter"></div>
+          </div>
+        </div>
       </div>
       <div class="player-meta">
         <h2 id="pTitle">曲名</h2>
@@ -232,7 +248,9 @@
       </div>
       <div class="controls">
         <div class="side-btn" id="shuffleBtn" onclick="toggleShuffle()">⟲ <span class="side-label">SHUFFLE</span></div>
+        <div class="skip-btn" onclick="skipPrev()">◂◂</div>
         <button class="play-toggle" id="playBtn" onclick="togglePlay()">▶</button>
+        <div class="skip-btn" onclick="skipNext()">▸▸</div>
         <div class="side-btn shuffle-active" id="repeatBtn" onclick="toggleRepeatMode()">⟳ <span class="side-label" id="repeatLabel">LOOP ALL</span></div>
       </div>
     </div>
@@ -310,6 +328,7 @@
 
   async function logout(){
     audioEl.pause(); isPlaying = false;
+    nowPlayingIndex = -1;
     await supabaseClient.auth.signOut();
     document.getElementById('loginId').value = '';
     document.getElementById('loginPass').value = '';
@@ -317,10 +336,12 @@
   }
 
   // ---- 曲一覧の取得(ログイン中のみRLSで許可される) ----
+  let nowPlayingIndex = -1; // 一覧画面での再生中ハイライト用(未再生時は-1)
+
   async function loadTracksFromDB(){
     const { data, error } = await supabaseClient
       .from('tracks')
-      .select('catalog_no, title, artist, storage_path')
+      .select('catalog_no, title, artist, storage_path, cover_url')
       .order('catalog_no', { ascending: true });
     if(error){
       alert('曲一覧の取得に失敗しました: ' + error.message);
@@ -331,7 +352,8 @@
       id: row.catalog_no,
       title: row.title,
       artist: row.artist,
-      storage_path: row.storage_path
+      storage_path: row.storage_path,
+      cover_url: row.cover_url || null
     }));
   }
 
@@ -341,7 +363,7 @@
     document.getElementById('catalogCount').textContent = tracks.length + ' TRACKS';
     tracks.forEach((t, i) => {
       const el = document.createElement('div');
-      el.className = 'catalog-row';
+      el.className = 'catalog-row' + (i === nowPlayingIndex ? ' now-playing' : '');
       el.onclick = () => openPlayer(i);
       el.innerHTML = `
         <div class="catalog-id">${t.id}</div>
@@ -349,7 +371,7 @@
           <p class="catalog-title">${t.title}</p>
           ${t.artist ? `<p class="catalog-artist">${t.artist}</p>` : ''}
         </div>
-        <div class="catalog-play">PLAY</div>
+        <div class="catalog-play">${i === nowPlayingIndex ? 'NOW PLAYING' : 'PLAY'}</div>
       `;
       list.appendChild(el);
     });
@@ -360,7 +382,10 @@
     document.getElementById(id).classList.add('active');
   }
 
-  function showList(){ switchScreen('listScreen'); }
+  function showList(){
+    renderList(); // 再生中の状態を反映してから一覧に戻る
+    switchScreen('listScreen');
+  }
 
   async function openPlayer(i){
     setOrderFrom(i);
@@ -368,15 +393,36 @@
     await loadTrack(order[posInOrder]);
   }
 
+  function skipNext(){
+    posInOrder = (posInOrder + 1) % order.length;
+    loadTrack(order[posInOrder]);
+  }
+  function skipPrev(){
+    posInOrder = (posInOrder - 1 + order.length) % order.length;
+    loadTrack(order[posInOrder]);
+  }
+
   // ---- 曲の読み込み(そのつど期限付きURLを発行) ----
   async function loadTrack(i){
     currentIndex = i;
+    nowPlayingIndex = i;
     const t = tracks[i];
     document.getElementById('pTitle').textContent = t.title;
     document.getElementById('pArtist').textContent = t.artist || '';
     document.getElementById('pArtist').style.display = t.artist ? 'block' : 'none';
     document.getElementById('pCatalog').textContent = t.id;
     document.getElementById('errNote').textContent = '再生準備中…';
+
+    const discImg = document.getElementById('discImg');
+    const discCenter = document.getElementById('discCenter');
+    if(t.cover_url){
+      discImg.src = t.cover_url;
+      discImg.style.display = 'block';
+      discCenter.style.display = 'none';
+    } else {
+      discImg.style.display = 'none';
+      discCenter.style.display = 'block';
+    }
 
     const { data, error } = await supabaseClient
       .storage
@@ -401,6 +447,7 @@
     posInOrder = (posInOrder + 1) % order.length;
     loadTrack(order[posInOrder]);
   }
+
 
   function playAudio(){
     audioEl.play().catch(()=>{});
