@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TEST LABEL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black: #0A0A0C;
+    --panel: #131316;
+    --hair: #2A2A2E;
+    --gold: #CBA135;
+    --gold-soft: #E4C878;
+    --text: #EFEEE9;
+    --text-dim: #86858C;
+    --aurora-1: #22E8B8;
+    --aurora-2: #8A5CF6;
+    --aurora-3: #F154B2;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--black);
+    color: var(--text);
+    font-family: "Noto Sans JP", sans-serif;
+    min-height:100vh;
+    display:flex; justify-content:center;
+  }
+  .stage{ width:100%; max-width:480px; min-height:100vh; position:relative; overflow:hidden; }
+  .wordmark{ font-family:"Cormorant Garamond", serif; }
+
+  /* ---------- PCブロック ---------- */
+  #pcBlock{
+    display:none; min-height:100vh; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; padding:40px;
+  }
+  #pcBlock .icon{ font-size:44px; margin-bottom:18px; opacity:.8; }
+  #pcBlock h1{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:22px; margin:0 0 12px; letter-spacing:.03em; }
+  #pcBlock p{ color:var(--text-dim); line-height:1.8; font-size:13.5px; max-width:300px; }
+
+  .screen{ display:none; min-height:100vh; padding:40px 26px 40px; flex-direction:column; position:relative; z-index:1; }
+  .screen.active{ display:flex; }
+
+  .aurora-glow{ display:none; }
+
+  /* ---------- ログイン ---------- */
+  #loginScreen{ justify-content:center; align-items:center; text-align:center; }
+  .brand-mark{ font-size:11px; letter-spacing:.35em; color:var(--gold); margin-bottom:10px; }
+  .logo-word{
+    font-size:40px; font-weight:600; letter-spacing:.08em; margin:0;
+    background: linear-gradient(120deg, var(--gold-soft), var(--gold) 60%, #a97f22);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .logo-rule{ width:46px; height:1px; background: var(--gold); margin: 18px auto 16px; opacity:.6; }
+  .logo-sub{ font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--text-dim); font-size:14px; margin:0 0 40px; letter-spacing:.02em; }
+
+  .field{ width:100%; text-align:left; margin-bottom:16px; }
+  .field label{ font-size:10.5px; letter-spacing:.18em; color:var(--text-dim); display:block; margin-bottom:8px; }
+  .field input{
+    width:100%; padding:12px 2px; background:transparent;
+    border:none; border-bottom:1px solid var(--hair);
+    color:var(--text); font-size:15px; outline:none; border-radius:0;
+  }
+  .field input:focus{ border-bottom-color: var(--gold); }
+  .btn-primary{
+    width:100%; padding:14px; margin-top:14px;
+    border:1px solid var(--gold); border-radius:2px; background:transparent;
+    color:var(--gold-soft); font-size:12.5px; letter-spacing:.28em;
+    cursor:pointer; font-family:"Noto Sans JP",sans-serif;
+  }
+  .btn-primary:active{ background: rgba(203,161,53,0.1); }
+  .login-note{ margin-top:22px; font-size:11px; color:var(--text-dim); line-height:1.8; letter-spacing:.03em; }
+  .login-error{ color:#E8768A; font-size:12px; margin-top:12px; min-height:16px; letter-spacing:.02em; }
+
+  /* ---------- カタログ(曲一覧) ---------- */
+  #listScreen .header{ margin-bottom:30px; display:flex; justify-content:space-between; align-items:flex-end; }
+  #listScreen .header .wordmark{ font-size:19px; font-weight:600; letter-spacing:.06em; color:var(--gold-soft); }
+  #listScreen .header .eyebrow{ font-size:10px; letter-spacing:.25em; color:var(--text-dim); margin:0 0 4px; }
+  .catalog-count{ font-size:11px; color:var(--text-dim); letter-spacing:.05em; }
+
+  .catalog-row{
+    display:flex; align-items:center; gap:16px;
+    padding:18px 2px; border-bottom:1px solid var(--hair);
+    cursor:pointer;
+  }
+  .catalog-row:active{ background: rgba(203,161,53,0.05); }
+  .catalog-id{
+    font-family:"Cormorant Garamond",serif; font-style:italic;
+    color: var(--gold); font-size:14px; width:52px; flex-shrink:0; letter-spacing:.02em;
+  }
+  .catalog-info{ flex:1; min-width:0; }
+  .catalog-title{ font-size:14.5px; font-weight:500; margin:0 0 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .catalog-artist{ font-size:11.5px; color:var(--text-dim); margin:0; letter-spacing:.03em; }
+  .catalog-play{ font-size:11px; color:var(--text-dim); letter-spacing:.1em; flex-shrink:0; }
+
+  .logout-link{
+    margin-top:auto; text-align:center; padding-top:30px;
+    color:var(--text-dim); font-size:11px; letter-spacing:.15em; cursor:pointer;
+  }
+
+  /* ---------- 再生画面 ---------- */
+  #playerScreen{ justify-content:space-between; }
+  .player-top{ display:flex; align-items:center; justify-content:space-between; }
+  .back-btn{ font-size:13px; color:var(--text-dim); letter-spacing:.1em; cursor:pointer; }
+  .player-catalog{ font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--gold); font-size:13px; }
+
+  .player-art{ flex:1; display:flex; align-items:center; justify-content:center; margin: 26px 0 30px; position:relative; }
+  .disc{
+    width:224px; height:224px; border-radius:50%;
+    background: conic-gradient(from 90deg, var(--aurora-1), var(--aurora-2) 35%, var(--aurora-3) 65%, var(--aurora-1) 100%);
+    padding:3px;
+    box-shadow: 0 0 60px rgba(138,92,246,0.25), 0 20px 50px rgba(0,0,0,0.6);
+    animation: spin 9s linear infinite; animation-play-state: paused;
+  }
+  .disc.spinning{ animation-play-state: running; }
+  .disc-inner{
+    width:100%; height:100%; border-radius:50%; background: var(--black);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .disc-center{ width:16px; height:16px; border-radius:50%; background: var(--gold); }
+  @keyframes spin{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+
+  .player-meta{ text-align:center; margin-bottom:26px; }
+  .player-meta h2{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:21px; margin:0 0 8px; letter-spacing:.02em; }
+  .player-meta p{ color:var(--text-dim); font-size:12px; margin:0; letter-spacing:.08em; }
+
+  .seek-row{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .time{ font-size:10.5px; color:var(--text-dim); width:32px; flex-shrink:0; letter-spacing:.03em; }
+  .time.right{ text-align:right; }
+  input[type="range"]{
+    -webkit-appearance:none; flex:1; height:1px; border-radius:0;
+    background: var(--hair); outline:none;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:9px; height:9px; border-radius:50%;
+    background: var(--gold); cursor:pointer;
+  }
+  .eq-note{ text-align:center; font-size:10.5px; color:var(--text-dim); margin-bottom:28px; letter-spacing:.04em; }
+
+  .controls{ display:flex; align-items:center; justify-content:center; gap:34px; padding-bottom:10px; }
+  .play-toggle{
+    width:58px; height:58px; border-radius:50%; border:1px solid var(--gold);
+    background:transparent; display:flex; align-items:center; justify-content:center;
+    font-size:18px; color:var(--gold-soft); cursor:pointer;
+  }
+  .side-btn{ font-size:14px; color:var(--text-dim); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .side-label{ font-size:8.5px; letter-spacing:.12em; color:var(--text-dim); }
+  .side-btn.shuffle-active{ color: var(--gold-soft); }
+  .side-btn.shuffle-active .side-label{ color: var(--gold-soft); }
+  .side-btn.active-static{ color: var(--gold-soft); cursor:default; }
+  .side-btn.active-static .side-label{ color: var(--gold-soft); }
+
+  .demo-tag{
+    position:fixed; top:10px; left:50%; transform:translateX(-50%);
+    background: rgba(203,161,53,0.1); color:var(--gold-soft);
+    border:1px solid rgba(203,161,53,0.35);
+    font-size:10px; padding:5px 14px; border-radius:20px; z-index:50; letter-spacing:.08em;
+  }
+</style>
+</head>
+<body>
+
+  <div class="demo-tag">Supabase試作・テストレーベル内部確認用</div>
+
+  <div id="pcBlock">
+    <div class="icon">◐</div>
+    <h1 class="wordmark">Please use a mobile device</h1>
+    <p>このアプリはスマートフォン・タブレット専用です。<br>お使いのスマホでこのページを開き直してください。</p>
+  </div>
+
+  <div class="stage" id="stage">
+
+    <!-- ログイン -->
+    <div class="screen active" id="loginScreen">
+      <div class="aurora-glow"></div>
+      <div class="brand-mark">ARCHIVE ACCESS</div>
+      <h1 class="logo-word wordmark">TEST LABEL</h1>
+      <div class="logo-rule"></div>
+      <p class="logo-sub wordmark">an independent sound archive</p>
+
+      <div class="field">
+        <label>MEMBER ID</label>
+        <input type="text" id="loginId" placeholder="demo" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>PASSCODE</label>
+        <input type="password" id="loginPass" placeholder="••••••••">
+      </div>
+      <button class="btn-primary" onclick="tryLogin()">E N T E R</button>
+      <div class="login-error" id="loginError"></div>
+
+      <p class="login-note">テストアカウント<br>ID: demo / パスワード: demo1234</p>
+    </div>
+
+    <!-- カタログ(曲一覧) -->
+    <div class="screen" id="listScreen">
+      <div class="header">
+        <div>
+          <p class="eyebrow">CATALOG</p>
+          <div class="wordmark">TEST LABEL</div>
+        </div>
+        <div class="catalog-count" id="catalogCount"></div>
+      </div>
+      <div id="trackList"></div>
+      <div class="logout-link" onclick="logout()">L O G   O U T</div>
+    </div>
+
+    <!-- 再生画面 -->
+    <div class="screen" id="playerScreen">
+      <div class="aurora-glow"></div>
+      <div class="player-top">
+        <div class="back-btn" onclick="showList()">‹ CATALOG</div>
+        <div class="player-catalog" id="pCatalog">TL—001</div>
+      </div>
+      <div class="player-art">
+        <div class="disc" id="disc"><div class="disc-inner"><div class="disc-center"></div></div></div>
+      </div>
+      <div class="player-meta">
+        <h2 id="pTitle">曲名</h2>
+        <p id="pArtist">ARTIST</p>
+      </div>
+      <div>
+        <div class="seek-row">
+          <span class="time" id="curTime">0:00</span>
+          <input type="range" id="seek" value="0" min="0" max="100">
+          <span class="time right" id="durTime">0:00</span>
+        </div>
+        <p class="eq-note">DOWNLOAD DISABLED — ARCHIVE PLAYBACK ONLY</p>
+        <p class="eq-note" id="errNote" style="color:#E8768A;"></p>
+      </div>
+      <div class="controls">
+        <div class="side-btn" id="shuffleBtn" onclick="toggleShuffle()">⟲ <span class="side-label">SHUFFLE</span></div>
+        <button class="play-toggle" id="playBtn" onclick="togglePlay()">▶</button>
+        <div class="side-btn shuffle-active" id="repeatBtn" onclick="toggleRepeatMode()">⟳ <span class="side-label" id="repeatLabel">LOOP ALL</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <audio id="audioEl"></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ---- Supabase接続設定 ----
+  const SUPABASE_URL = "https://afczecsfamgikuxtzkfs.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmY3plY3NmYW1naWt1eHR6a2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MDg1MTEsImV4cCI6MjEwNDE4NDUxMX0.TU1hYnyUbGmxRw2UQpdZNSAJhRe2Fb1Whrx7NbrVAPU";
+  const EMAIL_DOMAIN = "@test-label.local"; // 生徒IDの末尾に自動付与するダミードメイン
+  const BUCKET_NAME = "tracks";
+  const SIGNED_URL_TTL = 300; // 署名付きURLの有効期限(秒)
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const audioEl = document.getElementById('audioEl');
+  let tracks = [];       // { id(catalog_no), title, artist, storage_path }
+  let currentIndex = 0;
+  let isPlaying = false;
+  let isShuffle = false;
+  let repeatMode = 'all'; // 'all' または 'one'
+  let order = [];
+  let posInOrder = 0;
+
+  function sequentialOrder(start){
+    const o = [];
+    for(let k = 0; k < tracks.length; k++){ o.push((start + k) % tracks.length); }
+    return o;
+  }
+  function shuffledOrder(start){
+    const rest = Array.from({length: tracks.length}, (_, k) => k).filter(x => x !== start);
+    for(let k = rest.length - 1; k > 0; k--){
+      const j = Math.floor(Math.random() * (k + 1));
+      [rest[k], rest[j]] = [rest[j], rest[k]];
+    }
+    return [start, ...rest];
+  }
+  function setOrderFrom(start){
+    order = isShuffle ? shuffledOrder(start) : sequentialOrder(start);
+    posInOrder = 0;
+  }
+  function toggleShuffle(){
+    isShuffle = !isShuffle;
+    document.getElementById('shuffleBtn').classList.toggle('shuffle-active', isShuffle);
+    setOrderFrom(currentIndex);
+  }
+  function toggleRepeatMode(){
+    repeatMode = (repeatMode === 'all') ? 'one' : 'all';
+    document.getElementById('repeatLabel').textContent = (repeatMode === 'all') ? 'LOOP ALL' : 'REPEAT ONE';
+  }
+
+  // ---- ログイン ----
+  async function tryLogin(){
+    const idRaw = document.getElementById('loginId').value.trim();
+    const pass = document.getElementById('loginPass').value.trim();
+    const err = document.getElementById('loginError');
+    if(!idRaw || !pass){ err.textContent = 'IDとパスワードを入力してください'; return; }
+    const email = idRaw.includes('@') ? idRaw : idRaw + EMAIL_DOMAIN;
+
+    err.textContent = 'ログイン中…';
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+    if(error){
+      err.textContent = 'IDまたはパスワードが正しくありません';
+      return;
+    }
+    err.textContent = '';
+    await loadTracksFromDB();
+    renderList();
+    switchScreen('listScreen');
+  }
+
+  async function logout(){
+    audioEl.pause(); isPlaying = false;
+    await supabaseClient.auth.signOut();
+    document.getElementById('loginId').value = '';
+    document.getElementById('loginPass').value = '';
+    switchScreen('loginScreen');
+  }
+
+  // ---- 曲一覧の取得(ログイン中のみRLSで許可される) ----
+  async function loadTracksFromDB(){
+    const { data, error } = await supabaseClient
+      .from('tracks')
+      .select('catalog_no, title, artist, storage_path')
+      .order('catalog_no', { ascending: true });
+    if(error){
+      alert('曲一覧の取得に失敗しました: ' + error.message);
+      tracks = [];
+      return;
+    }
+    tracks = data.map(row => ({
+      id: row.catalog_no,
+      title: row.title,
+      artist: row.artist,
+      storage_path: row.storage_path
+    }));
+  }
+
+  function renderList(){
+    const list = document.getElementById('trackList');
+    list.innerHTML = '';
+    document.getElementById('catalogCount').textContent = tracks.length + ' TRACKS';
+    tracks.forEach((t, i) => {
+      const el = document.createElement('div');
+      el.className = 'catalog-row';
+      el.onclick = () => openPlayer(i);
+      el.innerHTML = `
+        <div class="catalog-id">${t.id}</div>
+        <div class="catalog-info">
+          <p class="catalog-title">${t.title}</p>
+          ${t.artist ? `<p class="catalog-artist">${t.artist}</p>` : ''}
+        </div>
+        <div class="catalog-play">PLAY</div>
+      `;
+      list.appendChild(el);
+    });
+  }
+
+  function switchScreen(id){
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function showList(){ switchScreen('listScreen'); }
+
+  async function openPlayer(i){
+    setOrderFrom(i);
+    switchScreen('playerScreen');
+    await loadTrack(order[posInOrder]);
+  }
+
+  // ---- 曲の読み込み(そのつど期限付きURLを発行) ----
+  async function loadTrack(i){
+    currentIndex = i;
+    const t = tracks[i];
+    document.getElementById('pTitle').textContent = t.title;
+    document.getElementById('pArtist').textContent = t.artist || '';
+    document.getElementById('pArtist').style.display = t.artist ? 'block' : 'none';
+    document.getElementById('pCatalog').textContent = t.id;
+    document.getElementById('errNote').textContent = '再生準備中…';
+
+    const { data, error } = await supabaseClient
+      .storage
+      .from(BUCKET_NAME)
+      .createSignedUrl(t.storage_path, SIGNED_URL_TTL);
+
+    if(error){
+      document.getElementById('errNote').textContent = 'URL発行エラー: ' + error.message;
+      return;
+    }
+    document.getElementById('errNote').textContent = '';
+    audioEl.src = data.signedUrl;
+    audioEl.currentTime = 0;
+    playAudio();
+  }
+
+  function playNext(){
+    if(repeatMode === 'one'){
+      loadTrack(currentIndex);
+      return;
+    }
+    posInOrder = (posInOrder + 1) % order.length;
+    loadTrack(order[posInOrder]);
+  }
+
+  function playAudio(){
+    audioEl.play().catch(()=>{});
+    isPlaying = true;
+    document.getElementById('playBtn').textContent = '❚❚';
+    document.getElementById('disc').classList.add('spinning');
+  }
+  function pauseAudio(){
+    audioEl.pause(); isPlaying = false;
+    document.getElementById('playBtn').textContent = '▶';
+    document.getElementById('disc').classList.remove('spinning');
+  }
+  function togglePlay(){ isPlaying ? pauseAudio() : playAudio(); }
+
+  function formatTime(sec){
+    if(!isFinite(sec)) return '0:00';
+    const m = Math.floor(sec/60), s = Math.floor(sec%60).toString().padStart(2,'0');
+    return `${m}:${s}`;
+  }
+  audioEl.addEventListener('loadedmetadata', () => {
+    document.getElementById('durTime').textContent = formatTime(audioEl.duration);
+    document.getElementById('seek').max = Math.floor(audioEl.duration);
+  });
+  audioEl.addEventListener('timeupdate', () => {
+    document.getElementById('curTime').textContent = formatTime(audioEl.currentTime);
+    document.getElementById('seek').value = Math.floor(audioEl.currentTime);
+  });
+  audioEl.addEventListener('ended', () => { playNext(); });
+  audioEl.addEventListener('error', () => {
+    const code = audioEl.error ? audioEl.error.code : '不明';
+    document.getElementById('errNote').textContent = `再生エラー(コード:${code})`;
+  });
+  document.getElementById('seek').addEventListener('input', (e) => { audioEl.currentTime = Number(e.target.value); });
+
+  // 右クリック・長押し保存の抑制(簡易的な心理的抑止)
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // ---- PC判定(画面サイズベース) ----
+  function checkDevice(){
+    const isSmall = window.innerWidth <= 820;
+    document.getElementById('pcBlock').style.display = isSmall ? 'none' : 'flex';
+    document.getElementById('stage').style.display = isSmall ? 'block' : 'none';
+  }
+  window.addEventListener('resize', checkDevice);
+  checkDevice();
+</script>
+</body>
+</html>
