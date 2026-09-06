@@ -119,6 +119,12 @@
     animation: spin 9s linear infinite; animation-play-state: paused;
   }
   .disc.spinning{ animation-play-state: running; }
+  .disc.has-cover{
+    border-radius:18px; background:var(--panel); animation:none;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  }
+  .disc.has-cover .disc-inner{ border-radius:14px; }
+  .disc.has-cover .disc-img{ border-radius:14px; }
   .disc-inner{
     width:100%; height:100%; border-radius:50%; background: var(--black);
     display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
@@ -132,7 +138,7 @@
   .player-meta p{ color:var(--text-dim); font-size:12px; margin:0; letter-spacing:.08em; }
 
   .seek-row{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-  .time{ font-size:10.5px; color:var(--text-dim); width:32px; flex-shrink:0; letter-spacing:.03em; }
+  .time{ font-size:15px; color:var(--text-dim); width:44px; flex-shrink:0; letter-spacing:.02em; }
   .time.right{ text-align:right; }
   input[type="range"]{
     -webkit-appearance:none; flex:1; height:1px; border-radius:0;
@@ -144,14 +150,14 @@
   }
   .eq-note{ text-align:center; font-size:10.5px; color:var(--text-dim); margin-bottom:28px; letter-spacing:.04em; }
 
-  .controls{ display:flex; align-items:center; justify-content:center; gap:34px; padding-bottom:10px; }
+  .controls{ display:flex; align-items:center; justify-content:center; gap:18px; padding-bottom:10px; }
   .play-toggle{
     width:58px; height:58px; border-radius:50%; border:1px solid var(--gold);
     background:transparent; display:flex; align-items:center; justify-content:center;
     font-size:18px; color:var(--gold-soft); cursor:pointer;
   }
-  .side-btn{ font-size:14px; color:var(--text-dim); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; }
-  .side-label{ font-size:8.5px; letter-spacing:.12em; color:var(--text-dim); }
+  .side-btn{ font-size:20px; color:var(--text-dim); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .side-label{ font-size:14px; letter-spacing:.08em; color:var(--text-dim); }
   .side-btn.shuffle-active{ color: var(--gold-soft); }
   .side-btn.shuffle-active .side-label{ color: var(--gold-soft); }
   .side-btn.active-static{ color: var(--gold-soft); cursor:default; }
@@ -388,6 +394,13 @@
   }
 
   async function openPlayer(i){
+    // すでに再生中(または準備済み)の曲を選んだ場合は、再読み込みせずそのまま画面遷移だけ行う
+    if(i === currentIndex && audioEl.src){
+      switchScreen('playerScreen');
+      document.getElementById('playBtn').textContent = isPlaying ? '❚❚' : '▶';
+      document.getElementById('disc').classList.toggle('spinning', isPlaying);
+      return;
+    }
     setOrderFrom(i);
     switchScreen('playerScreen');
     await loadTrack(order[posInOrder]);
@@ -415,13 +428,16 @@
 
     const discImg = document.getElementById('discImg');
     const discCenter = document.getElementById('discCenter');
+    const discEl = document.getElementById('disc');
     if(t.cover_url){
       discImg.src = t.cover_url;
       discImg.style.display = 'block';
       discCenter.style.display = 'none';
+      discEl.classList.add('has-cover');
     } else {
       discImg.style.display = 'none';
       discCenter.style.display = 'block';
+      discEl.classList.remove('has-cover');
     }
 
     const { data, error } = await supabaseClient
